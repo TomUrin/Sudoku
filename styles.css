@@ -1,6 +1,11 @@
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial,sans-serif;background:#0e1320;color:#e8ecf1}h1{margin:0;font-size:1.4rem}
-.app{max-width:560px;margin:20px auto;padding:16px}
-header{display:flex;flex-direction:column;gap:12px;margin-bottom:12px}
+.app{max-width:720px;margin:20px auto;padding:16px}
+header{display:flex;flex-direction:column;gap:10px;margin-bottom:10px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.status{display:flex;gap:8px;flex-wrap:wrap}
+.pill{display:flex;gap:6px;align-items:center;background:#0f172a;border:1px solid #243047;border-radius:999px;padding:6px 10px}
+.pill span{color:#9fb0c6;font-size:.85rem}
+.pill strong{font-weight:700}
 .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 select,button{padding:8px 10px;border:1px solid #243047;background:#141b2d;color:#e8ecf1;border-radius:8px;cursor:pointer}
 button:hover{background:#1b243a}
@@ -11,9 +16,24 @@ button:hover{background:#1b243a}
 .cell.invalid{background:#3a1220}
 .notes{position:absolute;inset:6px;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:2px;font-size:.6rem;color:#94a3b8;pointer-events:none}
 .note{display:flex;align-items:center;justify-content:center}
-/* 3x3 blokų briaunos */
 .cell{border:1px solid #16203a}
-.cell:nth-child(3n+1){}
 .rowSep{border-bottom:2px solid #2b3b68}
 .colSep{border-right:2px solid #2b3b68}
 footer{margin-top:14px;font-size:.9rem;color:#9fb0c6}
+/* Lives */
+.lives{display:flex;gap:6px;align-items:center}
+.heart{width:24px;height:24px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.3))}
+.heart svg{display:block}
+.heart.off{opacity:.25}
+/* Overlay */
+.overlay{position:fixed;inset:0;background:rgba(4,10,20,.6);display:flex;align-items:center;justify-content:center}
+.overlay.hidden{display:none}
+.dialog{background:#0f172a;border:1px solid #243047;border-radius:12px;padding:18px;min-width:320px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.dialog h2{margin:0 0 8px 0}
+.hidden{display:none}
+/* Table */
+.table{max-height:50vh;overflow:auto;margin:8px 0;border:1px solid #243047;border-radius:8px}
+.table table{width:100%;border-collapse:collapse}
+.table th,.table td{padding:8px;border-bottom:1px solid #203050;text-align:left;font-size:.95rem}
+.modalActions{display:flex;gap:8px;justify-content:flex-end}
+.dailyOpts{display:flex;gap:6px;align-items:center}
