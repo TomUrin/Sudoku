@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sudoku MVP</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Sudoku MVP</h1>
+      <div class="controls">
+        <label>Sudėtingumas:
+          <select id="difficulty">
+            <option value="easy">Lengvas</option>
+            <option value="medium">Vidutinis</option>
+            <option value="hard">Sunkus</option>
+          </select>
+        </label>
+        <button id="newGameBtn">Naujas žaidimas</button>
+        <button id="checkBtn">Patikrinti</button>
+        <button id="hintBtn">Užuomina</button>
+        <button id="clearNotesBtn">Išvalyti pastabas</button>
+      </div>
+    </header>
+
+    <main>
+      <div id="board" class="board" aria-label="Sudoku lenta" role="grid"></div>
+    </main>
+
+    <footer>
+      <p>Valdikliai: spausk ant langelio, rašyk skaičius 1–9. Laikyk Alt ir spausk skaičių, kad įrašytum pastabą.</p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
