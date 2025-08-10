@@ -41,6 +41,168 @@ let dailyMode = false;
 let dailySeed = null;
 let countdownTimer = null;
 
+// Tools state
+let inputMode = 'pencil'; // 'pencil' or 'marker'
+let activeCell = null; // {r,c,cell,input,notes}
+
+const pencilBtn = document.getElementById('pencilBtn');
+const markerBtn = document.getElementById('markerBtn');
+const eraserBtn = document.getElementById('eraserBtn');
+const clearCellBtn = document.getElementById('clearCellBtn');
+
+function setMode(mode){
+  inputMode = mode;
+  pencilBtn.classList.toggle('active', mode==='pencil');
+  markerBtn.classList.toggle('active', mode==='marker');
+}
+pencilBtn.addEventListener('click', ()=> setMode('pencil'));
+markerBtn.addEventListener('click', ()=> setMode('marker'));
+eraserBtn.addEventListener('click', ()=> eraseActive());
+
+function eraseActive(){
+  if(!activeCell || gameOver) return;
+  const {input,cell,notes} = activeCell;
+  if(input.readOnly) return;
+  input.value='';
+  cell.classList.remove('invalid');
+  input.dataset.lastWrong='';
+  for(const n of notes.children) n.textContent='';
+  afterErase();
+}
+
+clearCellBtn.addEventListener('click', eraseActive);
+
+// Numpad
+document.querySelectorAll('.numpad .n').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const d = parseInt(btn.dataset.n,10);
+    handleDigit(d);
+  });
+});
+
+
+// Smart notes settings
+const smartNotesChk = document.getElementById('smartNotes');
+const autoSinglesChk = document.getElementById('autoSingles');
+
+function peersOf(r,c){
+  const peers = new Set();
+  for(let i=0;i<9;i++){ if(i!==c) peers.add(`${r},${i}`); if(i!==r) peers.add(`${i},${c}`); }
+  const br = Math.floor(r/3)*3, bc = Math.floor(c/3)*3;
+  for(let i=0;i<3;i++) for(let j=0;j<3;j++){
+    const rr = br+i, cc = bc+j;
+    if(rr!==r || cc!==c) peers.add(`${rr},${cc}`);
+  }
+  return Array.from(peers).map(s => {
+    const [rr,cc] = s.split(',').map(Number);
+    return cells[rr*9+cc];
+  });
+}
+
+function currentGridValue(r,c){
+  const {input} = cells[r*9+c];
+  const v = parseInt(input.value||'0',10);
+  return v||0;
+}
+
+function isCandidateAllowedAt(r,c,d){
+  // check row
+  for(let i=0;i<9;i++){ if(i!==c && currentGridValue(r,i)===d) return false; }
+  // col
+  for(let i=0;i<9;i++){ if(i!==r && currentGridValue(i,c)===d) return false; }
+  // box
+  const br = Math.floor(r/3)*3, bc = Math.floor(c/3)*3;
+  for(let i=0;i<3;i++) for(let j=0;j<3;j++){
+    const rr=br+i, cc=bc+j;
+    if((rr!==r || cc!==c) && currentGridValue(rr,cc)===d) return false;
+  }
+  return true;
+}
+
+function updateNotesConflicts(){
+  for(const {r,c,input,notes} of cells){
+    if(input.value) { // if cell filled, clear notes
+      for(const n of notes.children){ n.textContent=''; n.classList.remove('invalid'); }
+      continue;
+    }
+    for(let k=1;k<=9;k++){
+      const node = notes.children[k-1];
+      if(node.textContent){
+        const ok = isCandidateAllowedAt(r,c,k);
+        node.classList.toggle('invalid', !ok);
+      }else{
+        node.classList.remove('invalid');
+      }
+    }
+  }
+}
+
+function smartEliminate(r,c,val){
+  if(!smartNotesChk.checked) return;
+  for(const peer of peersOf(r,c)){
+    const node = peer.notes.children[val-1];
+    if(node && node.textContent===''+val){
+      node.textContent='';
+      node.classList.remove('invalid');
+    }
+  }
+}
+
+function countNotes(notes){
+  let cnt=0, last=0;
+  for(let k=1;k<=9;k++){
+    if(notes.children[k-1].textContent){ cnt++; last = k; }
+  }
+  return {cnt,last};
+}
+
+function autoFillSingles(){
+  if(!autoSinglesChk.checked) return;
+  for(const ref of cells){
+    const {input,notes,r,c,cell} = ref;
+    if(input.readOnly) continue;
+    if(input.value) continue;
+    const {cnt,last} = countNotes(notes);
+    if(cnt===1){
+      input.value = String(last);
+      for(const n of notes.children) n.textContent='';
+      validateCell(r,c,input,cell,true,true);
+      // po užpildymo dar kartą pravalom peer pastabas
+      smartEliminate(r,c,last);
+    }
+  }
+}
+
+// Run maintenance after any placement or erase
+function afterPlacement(r,c,val){
+  updateNotesConflicts();
+  smartEliminate(r,c,val);
+  autoFillSingles();
+}
+
+function afterErase(){
+  updateNotesConflicts();
+  autoFillSingles();
+}
+
+function handleDigit(d){
+  if(!activeCell || gameOver) return;
+  const {r,c,input,cell,notes} = activeCell;
+  if(input.readOnly) return;
+  if(inputMode==='pencil'){
+    const idx = d-1;
+    const t = notes.children[idx];
+    t.textContent = t.textContent ? '' : String(d);
+    vibrate(10);
+  }else{
+    input.value = String(d);
+    for(const n of notes.children) n.textContent='';
+    validateCell(r,c,input,cell,true,true);
+  }
+}
+
+// When building, track active cell focus
+
 const DIFF_CLUES = { easy:45, medium:36, hard:30, expert:24 };
 const HISTORY_KEY = 'sudoku_daily_history';
 
@@ -158,24 +320,34 @@ function buildBoard(){
       if(puzzle[r][c]!==0){ input.value = puzzle[r][c]; input.readOnly = true; input.dataset.correct = '1'; cell.classList.add('readonly'); }
       else { input.value = ''; }
 
+      input.addEventListener('focus', () => { activeCell = ref; });
+      cell.addEventListener('click', () => { input.focus(); activeCell = ref; });
       input.addEventListener('keydown', e => {
         if(gameOver) return;
         if(!started){ started = true; startTimer(); }
-        if(e.altKey){
+        if(inputMode==='pencil' || e.altKey){
           const d = parseInt(e.key,10);
           if(d>=1 && d<=9){
             e.preventDefault();
             const notesCells = notes.children;
             notesCells[d-1].textContent = notesCells[d-1].textContent ? '' : d.toString();
+            return;
           }
           return;
         }
         const d = parseInt(e.key,10);
         if(d>=1 && d<=9){
           e.preventDefault();
-          input.value = d.toString();
-          for(const n of notes.children) n.textContent='';
-          validateCell(r,c,input,cell,true,true);
+          if(inputMode==='pencil' && !e.altKey){
+            const idx = d-1; const t = notes.children[idx]; t.textContent = t.textContent ? '' : String(d);
+            updateNotesConflicts();
+            autoFillSingles();
+          } else {
+            input.value = d.toString();
+            for(const n of notes.children) n.textContent='';
+            validateCell(r,c,input,cell,true,true);
+            afterPlacement(r,c,d);
+          }
         }else if(e.key==='Backspace' || e.key==='Delete' || e.key==='0'){
           input.value='';
           cell.classList.remove('invalid');
@@ -187,7 +359,8 @@ function buildBoard(){
       cell.appendChild(input);
       cell.appendChild(notes);
       boardEl.appendChild(cell);
-      cells.push({r,c,cell,input,notes});
+      const ref = {r,c,cell,input,notes};
+      cells.push(ref);
     }
   }
 }
@@ -358,6 +531,8 @@ function startNewRound(seed=null){
   solution = data.solution;
   buildBoard();
   disableInputs(false);
+  updateNotesConflicts();
+  autoFillSingles();
   loadBest();
 }
 
