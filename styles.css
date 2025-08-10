@@ -47,3 +47,10 @@ footer{margin-top:14px;font-size:.9rem;color:#9fb0c6}
 
 .note.invalid{color:#ef4444}
 .cell:has(input:focus){outline:2px solid #445b9f; outline-offset:2px}
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#172033;color:#e8ecf1;
+  border:1px solid #2a3b68;border-radius:10px;padding:10px 14px;box-shadow:0 6px 18px rgba(0,0,0,.4);z-index:99}
+.toast.hidden{display:none}
+.numpad .n.disabled{opacity:.35;pointer-events:none}
+.cell.flash{animation:flash .3s ease-in-out}
+@keyframes flash{0%{background:#3a1220}100%{background:#0f172a}}

@@ -55,8 +55,8 @@ function setMode(mode){
   pencilBtn.classList.toggle('active', mode==='pencil');
   markerBtn.classList.toggle('active', mode==='marker');
 }
-pencilBtn.addEventListener('click', ()=> setMode('pencil'));
-markerBtn.addEventListener('click', ()=> setMode('marker'));
+pencilBtn.addEventListener('click', ()=> { setMode('pencil'); updateNumpadForActive(); });
+markerBtn.addEventListener('click', ()=> { setMode('marker'); updateNumpadForActive(); });
 eraserBtn.addEventListener('click', ()=> eraseActive());
 
 function eraseActive(){
@@ -178,11 +178,61 @@ function afterPlacement(r,c,val){
   updateNotesConflicts();
   smartEliminate(r,c,val);
   autoFillSingles();
+  updateNumpadForActive();
 }
 
 function afterErase(){
   updateNotesConflicts();
   autoFillSingles();
+  updateNumpadForActive();
+}
+
+
+// === Rule guards & UI helpers ===
+const toastEl = document.getElementById('toast');
+let toastTimer = null;
+function showToast(msg){
+  if(!toastEl) return alert(msg);
+  toastEl.textContent = msg;
+  toastEl.classList.remove('hidden');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> toastEl.classList.add('hidden'), 1400);
+}
+
+function allowedDigitsForCell(r,c){
+  const allowed = [];
+  for(let d=1; d<=9; d++){
+    if(isCandidateAllowedAt(r,c,d)) allowed.push(d);
+  }
+  return allowed;
+}
+
+function updateNumpadForActive(){
+  const pad = document.querySelectorAll('.numpad .n');
+  if(!activeCell){
+    pad.forEach(b=> b.classList.remove('disabled'));
+    return;
+  }
+  const {r,c,input} = activeCell;
+  if(input.readOnly){
+    pad.forEach(b=> b.classList.add('disabled'));
+    return;
+  }
+  const allowed = new Set(allowedDigitsForCell(r,c));
+  pad.forEach(b => {
+    const d = parseInt(b.dataset.n,10);
+    if(inputMode==='pencil'){
+      b.classList.toggle('disabled', !allowed.has(d));
+    }else{
+      // marker: leidžiam tik teisiškai galimus
+      b.classList.toggle('disabled', !allowed.has(d));
+    }
+  });
+}
+
+function flashCell(cell){
+  cell.classList.add('flash');
+  setTimeout(()=> cell.classList.remove('flash'), 300);
 }
 
 function handleDigit(d){
@@ -320,8 +370,8 @@ function buildBoard(){
       if(puzzle[r][c]!==0){ input.value = puzzle[r][c]; input.readOnly = true; input.dataset.correct = '1'; cell.classList.add('readonly'); }
       else { input.value = ''; }
 
-      input.addEventListener('focus', () => { activeCell = ref; });
-      cell.addEventListener('click', () => { input.focus(); activeCell = ref; });
+      input.addEventListener('focus', () => { activeCell = ref; updateNumpadForActive(); });
+      cell.addEventListener('click', () => { input.focus(); activeCell = ref; updateNumpadForActive(); });
       input.addEventListener('keydown', e => {
         if(gameOver) return;
         if(!started){ started = true; startTimer(); }
@@ -339,10 +389,12 @@ function buildBoard(){
         if(d>=1 && d<=9){
           e.preventDefault();
           if(inputMode==='pencil' && !e.altKey){
+            if(!isCandidateAllowedAt(r,c,d)){ showToast('Tas skaičius negalimas čia'); vibrate([80]); flashCell(cell); return; }
             const idx = d-1; const t = notes.children[idx]; t.textContent = t.textContent ? '' : String(d);
             updateNotesConflicts();
             autoFillSingles();
           } else {
+            if(!isCandidateAllowedAt(r,c,d)){ showToast('Skaičius jau egzistuoja eilutėje, stulpelyje ar bloke'); vibrate([120]); flashCell(cell); return; }
             input.value = d.toString();
             for(const n of notes.children) n.textContent='';
             validateCell(r,c,input,cell,true,true);
@@ -533,7 +585,9 @@ function startNewRound(seed=null){
   disableInputs(false);
   updateNotesConflicts();
   autoFillSingles();
+  updateNumpadForActive();
   loadBest();
+  updateNumpadForActive();
 }
 
 function startDaily(){
